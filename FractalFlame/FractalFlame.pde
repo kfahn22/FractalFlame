@@ -66,7 +66,7 @@ void setup() {
   //variations.add(new Hankerchief());
   //variations.add(new Heart());
   //variations.add(new Disc());
-  //variations.add(new Hyperbolic());
+  variations.add(new Hyperbolic());
   //variations.add(new Fisheye());
 
   // Starting point
@@ -84,7 +84,7 @@ void draw() {
   for (int i = 0; i < perFrame; i++) {
     // Pick a variation (equal probabilities)
     int index = int(random(variations.size()));
-    Variation variation = variations.get(index);
+    Variation variation = variations.get(9);
     // Save previous point just in case
     PVector previous = current.copy();
     
