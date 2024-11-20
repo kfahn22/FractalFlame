@@ -39,3 +39,5 @@ Exploring Fractal Flame algorithm
 [Fractal-Flame-Algorithm-in-C](https://github.com/jameswmccarty/Fractal-Flame-Algorithm-in-C)
 
 [IFS-Fractals](https://github.com/jonas-lj/IFS-Fractals)
+
+https://thmsdnnr.com/blog/draw-photo-histograms-d3-canvas/
