@@ -1,22 +1,16 @@
-// Coding Train Videos:
-// Stream: https://www.youtube.com/watch?v=5lIl5F1hpTE
-// Challenge: https://www.youtube.com/watch?v=BZUdGqeOD0w
 
-// Is there a way to further optimize???  Not sure the buffers are doing anything.
-let current;
-let finalV;
-
-let variations = [];
-let graphics = [];
-
-let pixies;
 let flameImg;
+let current;
+let variations = [];
 
+// Increasing number of buffers improves rendering speed, but only marginally
+let numBuffers = 2; // Number of buffers
+let buffers = [];
+
+// Number of iterations / draw cycle is adjusted in processBuffer(). A higher number perFrame will slow sketch down, but it will reach total faster
 let total = 10000000;
-let perFrame = 1000000;
-let test = false;
+let perFrame = 200000;
 let count = 0;
-let n = 1; // number of buffers
 let numVar = 4; // number of variations
 let c1, c2;
 
@@ -37,8 +31,6 @@ const options = [
   "Swirl",
 ];
 
-let indexes = [12, 4, 2];
-
 let palette = [
   [90, 169, 230],
   [98, 71, 170],
@@ -50,11 +42,6 @@ let palette = [
 function setup() {
   createCanvas(640, 480);
   pixelDensity(1);
-
-  if (test) {
-    total = 10000;
-    perFrame = 500;
-  }
 
   variationOptions = [
     new Diamond(),
@@ -80,35 +67,116 @@ function setup() {
     c2 = randomColor();
   }
 
-  variations = sphericalOption(variations)
+  variations = sphericalOption(variations);
 
-  // let weights = getVariationsWeights(numVar);
-  // variations = getRandomVariations(
-  //   variations,
-  //   numVar,
-  //   variationOptions,
-  //   weights
-  // );
-
-  // for (let i of indexes) {
-  //   variations.push(variationOptions[i]);
-  // }
-
-  graphics.push(imageBuffer());
-  for (let i = 0; i < n; i++) {
-    graphics.push(flameBuffer());
+  // Initialize buffers
+  let segmentHeight = Math.ceil(height / numBuffers);
+  for (let i = 0; i < numBuffers; i++) {
+    buffers.push({
+      pixies: new Float32Array(width * segmentHeight * 4), // [r, g, b, value]
+      maxVal: 0, // Local maximum value for the buffer
+      yStart: i * segmentHeight,
+      yEnd: Math.min((i + 1) * segmentHeight, height),
+    });
   }
 
-  flameImg = graphics[0].image;
-  pixies = graphics[1].pixies;
+  flameImg = createImage(width, height);
 
-  // Starting point
+  // Starting point for flame transformation
   current = createVector(random(-1, 1), random(-1, 1), random(0, 1));
+}
+
+function addBuffer(w, h, i, segmentHeight) {
+  let buffer = createGraphics(w, h);
+  let pixies = new Float32Array(width * segmentHeight * 4); // [r, g, b, value]
+  let yStart = i * segmentHeight;
+  let yEnd = Math.min(i * segmentHeight, height);
+
+  graphics.push({
+    buffer: buffer,
+    x: 0,
+    y: 0,
+    w: w,
+    h: h,
+    pixies: pixies,
+    maxVal: 0,
+    yStart: yStart,
+    yEnd: yEnd,
+  });
 }
 
 function draw() {
   clear();
-  for (let i = 0; i < perFrame; i++) {
+
+  // Process each buffer
+  for (let buffer of buffers) {
+    processBuffer(buffer);
+  }
+
+  // Compute the global maxVal
+  let globalMaxVal = computeGlobalMax(buffers);
+
+  flameImg.loadPixels();
+
+  for (let buffer of buffers) {
+    let { pixies, yStart, yEnd } = buffer;
+    for (let y = yStart; y < yEnd; y++) {
+      for (let x = 0; x < width; x++) {
+        let n = buffers.length;
+        let idx = (x + (y - yStart) * width) * 4; // Buffer index
+        let globalIdx = (x + y * width) * 4; // Image index
+
+        let value = pixies[idx + 3];
+
+        let normVal = globalMaxVal > 0 ? Math.log10(value) / globalMaxVal : 0;
+
+        let r = pixies[idx] * normVal;
+        let g = pixies[idx + 1] * normVal;
+        let b = pixies[idx + 2] * normVal;
+
+        // This is a slow step, haven't figured out a viable way to improve yet
+        // Tried a lookup table and using a shader
+        let gamma = 1 / 4;
+        r = 255 * pow(r / 255, gamma);
+        g = 255 * pow(g / 255, gamma);
+        b = 255 * pow(b / 255, gamma);
+
+        flameImg.pixels[globalIdx] = r; // Red
+        flameImg.pixels[globalIdx + 1] = g; // Green
+        flameImg.pixels[globalIdx + 2] = b; // Blue
+        flameImg.pixels[globalIdx + 3] = 255; // Alpha
+      }
+    }
+  }
+
+  flameImg.updatePixels();
+
+  // Display the final image
+  image(flameImg, 0, 0);
+  filter(BLUR, 1);
+
+  // Faster, but not supported on Safari
+  //drawingContext.filter = "blur(1px)";
+
+  count += perFrame;
+  if (count >= total) {
+    noLoop();
+  }
+
+  let fps = frameRate();
+  //console.log(fps);
+  // Fairly slow ~ 2.3 
+}
+
+function randomColor() {
+  let c = random(palette);
+  return color(c[0], c[1], c[2]);
+}
+
+function processBuffer(buffer) {
+  let { pixies, yStart, yEnd } = buffer;
+
+  for (let i = 0; i < perFrame / numBuffers; i++) {
     // Pick a variation
     let index = int(random(variations.length));
     let variation = variations[index];
@@ -130,103 +198,40 @@ function draw() {
     let py = int(y + height / 2);
 
     // Update pixels if in bounds
-    if (px >= 0 && px < width && py >= 0 && py < height) {
-      pixies[px][py].value++;
+    if (px >= 0 && px < width && py >= yStart && py < yEnd) {
+      let localY = py - yStart; // Local y-coordinate for this buffer
+      let idx = (px + localY * width) * 4;
+
+      pixies[idx + 3]++; // Increment value
+
       let c = lerpColor(c1, c2, current.z);
-      pixies[px][py].r += red(c) / 255;
-      pixies[px][py].g += green(c) / 255;
-      pixies[px][py].b += blue(c) / 255;
+      pixies[idx] += red(c) / 255;
+      pixies[idx + 1] += green(c) / 255;
+      pixies[idx + 2] += blue(c) / 255;
+    }
+  }
+}
+
+function applyGammaCorrection(pixels, gamma = 1 / 4) {
+  for (let i = 0; i < pixels.length; i += 4) {
+    pixels[i] = 255 * pow(pixels[i] / 255, gamma);
+    pixels[i + 1] = 255 * pow(pixels[i + 1] / 255, gamma);
+    pixels[i + 2] = 255 * pow(pixels[i + 2] / 255, gamma);
+  }
+}
+
+function computeGlobalMax(buffers) {
+  let globalMax = 0;
+  for (let buffer of buffers) {
+    let { pixies } = buffer;
+    for (let i = 0; i < pixies.length; i += 4) {
+      if (pixies[i] > 0) {
+        globalMax = Math.max(globalMax, Math.log10(pixies[i]));
+      }
     }
   }
 
-  // Find max log value
-  let maxVal = 0;
-  for (let i = 0; i < width; i++) {
-    for (let j = 0; j < height; j++) {
-      let pix = pixies[i][j];
-      let value = Math.log10(pix.value);
-      maxVal = Math.max(maxVal, value);
-    }
-  }
-
-  // Update image
-  flameImg.loadPixels();
-
-  for (let i = 0; i < width; i++) {
-    for (let j = 0; j < height; j++) {
-      let pix = pixies[i][j];
-      let value = Math.log10(pix.value) / maxVal;
-      let index = (i + j * width) * 4;
-
-      let r = pix.r * value;
-      let g = pix.g * value;
-      let b = pix.b * value;
-
-      // Apply gamma
-      let gamma = 1 / 4.0;
-      r = 255 * pow(r / 255, gamma);
-      g = 255 * pow(g / 255, gamma);
-      b = 255 * pow(b / 255, gamma);
-
-      flameImg.pixels[index] = r;
-      flameImg.pixels[index + 1] = g;
-      flameImg.pixels[index + 2] = b;
-      flameImg.pixels[index + 3] = 255;
-    }
-  }
-  flameImg.updatePixels();
-
-  // Display
-  //background(0);
-  image(flameImg, 0, 0);
-  filter(BLUR, 1);
-
-  // Check progress
-  count += perFrame;
-  if (count >= total) {
-    noLoop();
-    //saveCanvas("render" + millis(), "png");
-  }
-
-}
-
-function randomColor() {
-  let c = random(palette);
-  return color(c[0], c[1], c[2]);
-}
-
-function flameBuffer() {
-  let buffer = createGraphics(width, height);
-  // Initialize pixel array
-  let pixies = Array.from({ length: width }, () =>
-    Array.from({ length: height }, () => new Pixie())
-  );
-
-  let g = {
-    buffer: buffer,
-    x: 0,
-    y: 0,
-    w: width,
-    h: height,
-    pixies: pixies,
-  };
-  return g;
-}
-
-function imageBuffer() {
-  let buffer = createGraphics(width, height);
-
-  let img = createImage(width, height);
-
-  let g = {
-    buffer: buffer,
-    x: 0,
-    y: 0,
-    w: width,
-    h: height,
-    image: img,
-  };
-  return g;
+  return globalMax;
 }
 
 function sphericalOption(variations) {
@@ -250,6 +255,7 @@ function sphericalOption(variations) {
   return variations;
 }
 
+// Functions from https://github.com/brzzznko/FractalFlames/blob/main/js/main.js
 function getRandomVariations(variations, n, variationOptions, weights) {
   for (let j = 0; j < n; j++) {
     let i = int(random(variationOptions.length));

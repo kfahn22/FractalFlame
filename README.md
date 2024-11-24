@@ -1,6 +1,6 @@
-# FractalFlame
+# Fractal Flame in p5.js
 
-Exploring Fractal Flame algorithm
+I became interested in the Fractal Flame algorithm after watching one of Daniel Shiffman's livestreams(https://www.youtube.com/watch?v=6Uy1SifiBig). Starting with his version in [Processing](https://github.com/CodingTrain/FractalFlame), I have been working on a version in p5.js.
 
 ## References
 
@@ -39,5 +39,3 @@ Exploring Fractal Flame algorithm
 [Fractal-Flame-Algorithm-in-C](https://github.com/jameswmccarty/Fractal-Flame-Algorithm-in-C)
 
 [IFS-Fractals](https://github.com/jonas-lj/IFS-Fractals)
-
-https://thmsdnnr.com/blog/draw-photo-histograms-d3-canvas/
