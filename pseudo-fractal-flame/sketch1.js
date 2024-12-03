@@ -31,13 +31,30 @@ const options = [
   "Swirl",
 ];
 
-let palette = [
-  [90, 169, 230],
-  [98, 71, 170],
-  [244, 91, 105],
-  [255, 228, 94],
-  [255, 99, 146],
-];
+let url =
+  "https://supercolorpalette.com/?scp=G0-hsl-FFDA1F-FBAC23-F68128-F25A2C-1FB4FF-23DEFB-28F6E8-2CF2BD-691FFF-4023FB-2835F6-2C61F2";
+
+// Helper functions to convert the url to the color palette
+function extractHexCodes(url) {
+  let startIndex = url.indexOf("=");
+  let hexPart = url.substring(startIndex + 1);
+  let parts = hexPart.split("-");
+
+  // Filter valid hex codes
+  return parts.filter((part) => /^[0-9A-Fa-f]{6}$/.test(part));
+}
+
+function hexToColor(hex) {
+  let r = parseInt(hex.substring(0, 2), 16);
+  let g = parseInt(hex.substring(2, 4), 16);
+  let b = parseInt(hex.substring(4, 6), 16);
+  return color(r, g, b);
+}
+
+function generatePaletteArray(url) {
+  let hexCodes = extractHexCodes(url);
+  return hexCodes.map((hex) => hexToColor(hex));
+}
 
 function setup() {
   createCanvas(640, 480);
@@ -156,17 +173,12 @@ function draw() {
   image(flameImg, 0, 0);
   filter(BLUR, 1);
 
-  // Faster, but not supported on Safari
-  //drawingContext.filter = "blur(1px)";
-
   count += perFrame;
   if (count >= total) {
     noLoop();
   }
 
   let fps = frameRate();
-  //console.log(fps);
-  // Fairly slow ~ 2.3 
 }
 
 function randomColor() {
@@ -213,14 +225,6 @@ function processBuffer(buffer) {
   }
 }
 
-function applyGammaCorrection(pixels, gamma = 1 / 4) {
-  for (let i = 0; i < pixels.length; i += 4) {
-    pixels[i] = 255 * pow(pixels[i] / 255, gamma);
-    pixels[i + 1] = 255 * pow(pixels[i + 1] / 255, gamma);
-    pixels[i + 2] = 255 * pow(pixels[i + 2] / 255, gamma);
-  }
-}
-
 function computeGlobalMax(buffers) {
   let globalMax = 0;
   for (let buffer of buffers) {
@@ -256,28 +260,6 @@ function sphericalOption(variations) {
  variations.push(s1, s2, s3)
   return variations;
 }
-
-// function sphericalOption(variations, weights) {
-//   let s1 = new Spherical().setColor(weights[0]);
-//   s1.setTransform([
-//     -0.681206, -0.0779465, 0.20769, 0.755065, -0.0416126, -0.262334,
-//   ]);
-//   let s2 = new Spherical().setColor(weights[1]);
-//   s2.setTransform([
-//     0.953766, 0.48396, 0.43268, -0.0542476, 0.642503, -0.995898,
-//   ]);
-//   let s3 = new Spherical().setColor(weights[2]);
-//   s3.setTransform([
-//     0.840613, -0.816191, 0.318971, -0.430402, 0.905589, 0.909402,
-//   ]);
-//   let s4 = new Spherical().setColor(weights[3]);
-//   s4.setTransform([
-//     0.960492, -0.466555, 0.215383, -0.727377, -0.126074, 0.253509,
-//   ]);
-//   //variations.push(s1, s2, s3, s4);
-//   variations.push(s1, s2);
-//   return variations;
-// }
 
 // Functions from https://github.com/brzzznko/FractalFlames/blob/main/js/main.js
 function getRandomVariations(variations, n, variationOptions, weights) {

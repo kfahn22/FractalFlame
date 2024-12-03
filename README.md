@@ -4,19 +4,24 @@ I became interested in the Fractal Flame algorithm after watching one of Daniel 
 
 ## References
 
+- [GPU-Accelerated Rendering of Unbounded Nonlinear Iterated Function System Fixed Points](https://www.cs.uaf.edu/%7Eolawlor/papers/2011/ifs/lawlor_ifs_2011.pdf)
+
 - [The Fractal Flame Algorithm](https://flam3.com/flame_draves.pdf)
 
 - [Learnable Fractal Flames](https://arxiv.org/html/2406.09328v1)
 
 - [Fractal flame](https://en.wikipedia.org/wiki/Fractal_flame)
 
+-[JWildfire](https://www.jwfsanctuary.club)
+
+-[Basics of Flame Fractals](https://fractalformulas.wordpress.com/2017/05/01/basics-of-flame-fractals/)
+
+
 ## JavaScript/ Typescript Implementations
 
 - [FractalFlames](https://github.com/brzzznko/FractalFlames/tree/main)
 
 - [Exploring The Fractal Flame](https://codepen.io/DonKarlssonSan/post/exploring-the-fractal-flame)
-
-- [Fractal Flame Explorer](https://codepen.io/DonKarlssonSan/full/yNEPRV/)
 
 - [Fractal Inferno](https://github.com/tariqksoliman/Fractal-Inferno)
 
